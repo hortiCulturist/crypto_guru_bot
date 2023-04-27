@@ -1,5 +1,4 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
-import db
 
 
 def im_ready():
@@ -38,6 +37,7 @@ def pattern_button():
     m = ReplyKeyboardMarkup(resize_keyboard=True)
     m.add(KeyboardButton('🔄Обновить отзыв'))
     m.add(KeyboardButton('✍️Изменить название шаблона отзыва'))
+    m.insert(KeyboardButton('🔍Просмотр всех отзывов'))
     m.add(KeyboardButton('Назад'))
     return m
 
@@ -48,4 +48,10 @@ def send_manager_button():
     m.insert(KeyboardButton('🗑Удалить шаблон рассылки'))
     m.add(KeyboardButton('📨Рассылка'))
     m.add(KeyboardButton('Назад'))
+    return m
+
+
+def review():
+    m = InlineKeyboardMarkup(resize_keyboard=True)
+    m.insert(InlineKeyboardButton('One more comment👍', callback_data='onmrcnt'))
     return m

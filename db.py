@@ -23,6 +23,10 @@ def start_db():
                  '"chat_id"     INTEGER,'
                  '"message_id"  INTEGER,'
                  'PRIMARY KEY("chat_id", "message_id"))')
+    base.execute('CREATE TABLE IF NOT EXISTS "Feedback" ("id"	INTEGER NOT NULL UNIQUE,'
+                 '"user_id"  INTEGER,'
+                 '"number"  INTEGER,'
+                 'PRIMARY KEY("id" AUTOINCREMENT))')
     base.commit()
 
 
@@ -39,7 +43,6 @@ def first_add_post():
 
 
 def add_post(name, chat_id, message_id):
-    print('XXXXX')
     with sqlt.connect(db_name) as conn:
         cur = conn.cursor()
         cur.execute('UPDATE All_post SET chat_id= ?, message_id = ? WHERE name = ?', (chat_id, message_id, name))
@@ -130,3 +133,25 @@ def get_users_in_channel_id(user_id):
         cur = conn.cursor()
         data = cur.execute('SELECT channel_id FROM User WHERE user_id = ?', (user_id,)).fetchone()
         return data
+
+
+def add_feedback(user_id):
+    with sqlt.connect(db_name) as conn:
+        cur = conn.cursor()
+        data = cur.execute('SELECT user_id FROM Feedback WHERE user_id = ?', (user_id, )).fetchall()
+        if not bool(data):
+            cur.execute('INSERT INTO Feedback VALUES (null, ?, ?)', (user_id, 0))
+
+
+def edit_feedback(user_id):
+    with sqlt.connect(db_name) as conn:
+        cur = conn.cursor()
+        num = cur.execute('SELECT number FROM Feedback WHERE user_id = ?', (user_id, )).fetchone()
+        if num[0] == 6:
+            cur.execute('UPDATE Feedback SET number = ? WHERE user_id = ?', (0, user_id))
+            data = cur.execute('SELECT number FROM Feedback WHERE user_id = ?', (user_id, )).fetchone()
+            return data
+        else:
+            cur.execute('UPDATE Feedback SET number = ? WHERE user_id = ?', (num[0] + 1, user_id))
+            data = cur.execute('SELECT number FROM Feedback WHERE user_id = ?', (user_id,)).fetchone()
+            return data

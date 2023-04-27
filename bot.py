@@ -1,5 +1,6 @@
 import asyncio
 
+import aiogram
 from aiogram import Bot
 from aiogram import types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -49,17 +50,17 @@ class deletePattern(StatesGroup):
 
 @dp.message_handler(commands='start', user_id=config.ADMIN_ID)
 async def start(message: types.Message):
-    print(db.first_add_post())
     await bot.send_message(message.from_user.id, text="Добро пожаловать!", reply_markup=button.admin_menu())
 
 
 @dp.message_handler(commands='start')
 async def start(message: types.Message):
-    await bot.send_message(message.from_user.id, text="Добро пожаловать!")
+    await bot.send_message(message.from_user.id, text="Добро пожаловать!", reply_markup=button.user_menu())
 
 
 @dp.message_handler(text='📝Меню отзывов', user_id=config.ADMIN_ID)
 async def create_post(message: types.Message):
+    db.first_add_post()
     await bot.send_message(chat_id=message.chat.id, text=f'Меню отзывов', reply_markup=button.pattern_button())
 
 
@@ -95,9 +96,11 @@ async def welcome_post(message: types.Message):
     photo = InputFile("photo/photo_2.jpeg")
     await bot.send_message(chat_id=message.chat.id, text="Just over a <u>year ago I deposited $20,000</u> into my first crypto account.\n"
                                                          "<u>As of today It's now worth 1.7 million dollars.</u>\n\n"
-                                                         "🤔This wasn't just some string of luck. If you don't know who I am - I was a professional day trader in the stock market for 17 years.\n\n"
-                                                         "✔<b>I took all those skills that I learned and transferred them into my telegram group.</b>", parse_mode="html")
-    await asyncio.sleep(3)
+                                                         "🤔This wasn't just some string of luck. If you don't know who I am - I was a professional day trader in the stock market for 17 years.\n\n", parse_mode="html")
+    with open('voice/voice.ogg', 'rb') as voice:
+        await bot.send_voice(message.from_user.id, voice)
+    await bot.send_message(chat_id=message.chat.id, text="✔<b>I took all those skills that I learned and transferred them into my telegram group.</b>", parse_mode="html")
+    await asyncio.sleep(2)
     await bot.send_photo(chat_id=message.chat.id, photo=photo, caption="💯<b>You can do the same</b> if you follow me and use my knowledge.\n"
                                                                        "Ready to start this journey together?🤝", parse_mode='html', reply_markup=button.make_money())
 
@@ -174,6 +177,29 @@ async def welcome_post(message: types.Message):
                            parse_mode='html')
 
 
+@dp.message_handler(text="🥇Feedbacks")
+async def welcome_post(message: types.Message):
+    db.add_feedback(message.from_user.id)
+    feed_list = db.get_all_post()
+    print(feed_list)
+    x = db.edit_feedback(message.from_user.id)[0]
+    print(x)
+    await bot.copy_message(chat_id=message.chat.id, from_chat_id=feed_list[x][1],
+                           message_id=feed_list[x][2],
+                           reply_markup=button.review())
+
+
+@dp.callback_query_handler(text="onmrcnt")
+async def welcome_post(call: types.CallbackQuery):
+    feed_list = db.get_all_post()
+    print(feed_list)
+    x = db.edit_feedback(call.from_user.id)[0]
+    print(x)
+    await bot.copy_message(chat_id=call.from_user.id, from_chat_id=feed_list[x][1],
+                           message_id=feed_list[x][2],
+                           reply_markup=button.review())
+
+
 @dp.message_handler(text="👨‍💻Support")
 async def welcome_post(message: types.Message):
     await bot.send_message(chat_id=message.chat.id, text="📍24/7 support is only available for our VIP members. "
@@ -184,6 +210,7 @@ async def welcome_post(message: types.Message):
 @dp.message_handler(text="↪️ Channel link")
 async def welcome_post(message: types.Message):
     await bot.send_message(chat_id=message.chat.id, text="Invite for friends 👉🏻 https://t.me/+y0mM3yr9A59iMWFk")
+
 
 @dp.message_handler(text='🔄Обновить отзыв', user_id=config.ADMIN_ID)
 async def create_post(message: types.Message):
@@ -202,12 +229,10 @@ async def save_sample_name(message: types.Message, state: FSMContext):
     await bot.send_message(message.chat.id, text='Пришлите пост:')
 
 
-@dp.message_handler(state=updateFeedback.updateFeedback2)
+@dp.message_handler(state=updateFeedback.updateFeedback2, content_types=aiogram.types.ContentType.ANY)
 async def save_sample(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         title = data.get('title')
-
-    print(title)
     db.add_post(title, message.chat.id, message.message_id)
     await bot.send_message(message.chat.id, text=f'Вы успешно добавили шаблон поста под названием "{title}"',
                            reply_markup=button.admin_menu())
@@ -245,6 +270,14 @@ async def save_sample(message: types.Message, state: FSMContext):
         await state.finish()
 
 
+@dp.message_handler(text='🔍Просмотр всех отзывов', user_id=config.ADMIN_ID)
+async def create_post(message: types.Message):
+    for posts in db.get_all_post():
+        await bot.send_message(message.chat.id, text=f'Название: {posts[0]} 👇')
+        await bot.copy_message(chat_id=message.chat.id, from_chat_id=posts[1], message_id=posts[2])
+
+
+
 @dp.message_handler(text='✅Добавить шаблон рассылки', user_id=config.ADMIN_ID)
 async def create_post(message: types.Message):
     await bot.send_message(chat_id=message.chat.id, text=f'Пришлите название шаблона: ')
@@ -259,7 +292,7 @@ async def save_sample_name(message: types.Message, state: FSMContext):
     await bot.send_message(message.chat.id, text='Пришлите пост:')
 
 
-@dp.message_handler(state=saveMessage.sv_mess2)
+@dp.message_handler(state=saveMessage.sv_mess2, content_types=aiogram.types.ContentType.ANY)
 async def save_sample(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         title = data.get('title')
