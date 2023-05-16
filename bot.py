@@ -353,7 +353,8 @@ async def send(message: types.Message, state: FSMContext):
             for i in db.all_user():
                 print(i)
                 try:
-                    await bot.copy_message(chat_id=i[1], from_chat_id=message.chat.id, message_id=data[0][3])
+                    await bot.copy_message(chat_id=i[1], from_chat_id=message.chat.id, message_id=data[0][3],
+                                           reply_markup=button.user_menu())
                     good += 1
                 except Exception as e:
                     bad += 1
